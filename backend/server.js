@@ -13,13 +13,27 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 // --- Clients ---
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const geminiModel = genAI.getGenerativeModel({ 
-  model: 'gemini-2.0-flash',
-  generationConfig: { maxOutputTokens: 50, temperature: 0.1 }
-});
+// We wrap these in a simple check so the server doesn't crash on startup if keys are missing
+const getGeminiModel = () => {
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('your_')) {
+    return null;
+  }
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  return genAI.getGenerativeModel({ 
+    model: 'gemini-2.0-flash',
+    generationConfig: { maxOutputTokens: 50, temperature: 0.1 }
+  });
+};
 
-const mistralClient = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
+const getMistralClient = () => {
+  if (!process.env.MISTRAL_API_KEY || process.env.MISTRAL_API_KEY.includes('your_')) {
+    return null;
+  }
+  return new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
+};
+
+const geminiModel = getGeminiModel();
+const mistralClient = getMistralClient();
 
 // --- Helpers ---
 const createPrompt = (context) => {
@@ -43,8 +57,11 @@ app.post('/api/guess', async (req, res) => {
     const prompt = createPrompt(context);
 
     if (provider === 'Mistral') {
+      if (!mistralClient) {
+        return res.status(400).json({ error: 'Mistral API key is missing in .env' });
+      }
+
       console.log('Calling Mistral Pixtral Vision API...');
-      // Pixtral is much better for drawings than the OCR model
       const chatResponse = await mistralClient.chat.complete({
         model: "pixtral-12b-latest",
         messages: [{
@@ -57,17 +74,17 @@ app.post('/api/guess', async (req, res) => {
       });
 
       let text = chatResponse.choices[0].message.content.trim();
+      if (text.includes('![img')) text = "Hand-drawn sketch";
       
-      // Filter out OCR artifact if it happens
-      if (text.includes('![img')) {
-        text = "Hand-drawn sketch";
-      }
-
       console.log('Mistral Guess:', text);
       res.json({ guess: text || "Unclear drawing" });
 
     } else {
       // Default: Gemini
+      if (!geminiModel) {
+        return res.status(400).json({ error: 'Gemini API key is missing in .env' });
+      }
+
       const result = await geminiModel.generateContent([
         prompt,
         { inlineData: { data: image, mimeType: "image/png" } }
@@ -81,7 +98,7 @@ app.post('/api/guess', async (req, res) => {
   } catch (error) {
     console.error('Server Error:', error.message);
     const status = error.message.includes('429') ? 429 : 500;
-    const msg = status === 429 ? 'Daily limit reached.' : 'AI recognition failed.';
+    const msg = status === 429 ? 'Daily limit reached.' : `AI Error: ${error.message.substring(0, 50)}`;
     res.status(status).json({ error: msg });
   }
 });
