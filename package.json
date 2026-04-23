@@ -1,0 +1,11 @@
+{
+  "name": "draw-guess-root",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Root automation for Draw & Guess AI",
+  "scripts": {
+    "setup": "npm install --prefix backend && npm install --prefix frontend",
+    "start": "npm start --prefix backend & npm run serve --prefix frontend",
+    "stop": "pkill -f 'node server.js' && pkill -f 'webpack serve'"
+  }
+}
