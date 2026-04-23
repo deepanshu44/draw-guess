@@ -2,6 +2,9 @@
 
 # Draw & Guess AI - Start Script
 
+# Configuration
+NPM_PATH="/home/asus/.nvm/versions/node/v22.19.0/bin/npm"
+
 # Colors for better visibility
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -17,13 +20,13 @@ pkill -f 'webpack serve' 2>/dev/null
 # Start Backend
 echo -e "${GREEN}Starting Backend on port 3001...${NC}"
 cd backend
-npm start > /dev/null 2>&1 &
+$NPM_PATH start > /dev/null 2>&1 &
 BACKEND_PID=$!
 
 # Start Frontend
 cd ../frontend
 echo -e "${GREEN}Starting Frontend on port 8080...${NC}"
-npm run serve > /dev/null 2>&1 &
+$NPM_PATH run serve > /dev/null 2>&1 &
 FRONTEND_PID=$!
 
 echo -e "${BLUE}✨ Servers are running!${NC}"

@@ -6,6 +6,6 @@
   "scripts": {
     "setup": "npm install --prefix backend && npm install --prefix frontend",
     "start": "npm start --prefix backend & npm run serve --prefix frontend",
-    "stop": "pkill -f 'node server.js' && pkill -f 'webpack serve'"
+    "stop": "pkill -f 'server.js' && pkill -f 'webpack'"
   }
 }
