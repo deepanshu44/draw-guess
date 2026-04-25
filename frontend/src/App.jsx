@@ -68,14 +68,19 @@ const App = () => {
     try {
       const canvas = canvasRef.current;
       const finalCanvas = document.createElement("canvas");
-      // Use actual internal resolution for capture
-      finalCanvas.width = canvas.width;
-      finalCanvas.height = canvas.height;
+      
+      // FIXED AI RESOLUTION: Ensures consistent token usage regardless of screen size
+      const aiSize = 512;
+      finalCanvas.width = aiSize;
+      finalCanvas.height = aiSize;
       const ctx = finalCanvas.getContext("2d");
       
+      // Paint white background
       ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-      ctx.drawImage(canvas, 0, 0);
+      ctx.fillRect(0, 0, aiSize, aiSize);
+      
+      // Draw the user's high-res canvas downscaled to the AI's 512px view
+      ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, aiSize, aiSize);
 
       const dataUrl = finalCanvas.toDataURL("image/png");
       const base64Image = dataUrl.split(",")[1];
