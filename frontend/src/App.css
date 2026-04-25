@@ -52,8 +52,32 @@ p {
 
 .tool-settings {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.8rem;
   align-items: center;
+  width: 100%;
+}
+
+.brush-control {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  background: #eee;
+  padding: 4px 15px;
+  border-radius: 20px;
+  width: fit-content;
+}
+
+.brush-control input {
+  cursor: pointer;
+  width: 100px;
+}
+
+.tool-toggles {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .tool-btn {
@@ -147,7 +171,7 @@ p {
   margin-bottom: 2rem;
   width: 100%;
   max-width: 400px;
-  aspect-ratio: 1 / 1; /* Ensures it stays square on all screens */
+  aspect-ratio: 1 / 1;
   cursor: crosshair;
 }
 

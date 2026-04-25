@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect } from "react";
 import { getStroke } from "perfect-freehand";
 import "./App.css";
 
@@ -24,8 +24,9 @@ const App = () => {
   const [mode, setMode] = useState("Any");
   const [provider, setProvider] = useState("Gemini");
   const [isEraser, setIsEraser] = useState(false);
+  const [penSize, setPenSize] = useState(5);
   
-  // New State for Vector Strokes
+  // Vector Strokes State
   const [strokes, setStrokes] = useState([]);
   const [currentStroke, setCurrentStroke] = useState(null);
   const [redoStack, setRedoStack] = useState([]);
@@ -33,15 +34,8 @@ const App = () => {
   const modes = ["Any", "Object", "Letter", "Number", "Scenery"];
   const providers = ["Gemini", "Mistral", "Mistral OCR"];
 
-  // Canvas Drawing Options for perfect-freehand
-  const strokeOptions = {
-    size: isEraser ? 30 : 5,
-    thinning: 0.5,
-    smoothing: 0.5,
-    streamline: 0.5,
-  };
-
   const handleClear = () => {
+    if (strokes.length > 0 && !window.confirm("Clear entire board?")) return;
     setStrokes([]);
     setRedoStack([]);
     setGuess("");
@@ -74,15 +68,13 @@ const App = () => {
     try {
       const canvas = canvasRef.current;
       const finalCanvas = document.createElement("canvas");
+      // Use actual internal resolution for capture
       finalCanvas.width = canvas.width;
       finalCanvas.height = canvas.height;
       const ctx = finalCanvas.getContext("2d");
       
-      // Paint white background
       ctx.fillStyle = "white";
       ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-      
-      // Draw the current visible state
       ctx.drawImage(canvas, 0, 0);
 
       const dataUrl = finalCanvas.toDataURL("image/png");
@@ -123,7 +115,7 @@ const App = () => {
     setCurrentStroke({
       points: [point],
       color: isEraser ? "white" : "black",
-      size: isEraser ? 30 : 5
+      size: isEraser ? 35 : penSize // Eraser is always thick
     });
     setRedoStack([]);
   };
@@ -156,7 +148,6 @@ const App = () => {
     const ratio = window.devicePixelRatio || 1;
     
     const render = () => {
-      // Sync resolution
       canvas.width = canvas.offsetWidth * ratio;
       canvas.height = canvas.offsetHeight * ratio;
       ctx.scale(ratio, ratio);
@@ -169,7 +160,7 @@ const App = () => {
       allStrokes.forEach(stroke => {
         const outlinePoints = getStroke(stroke.points.map(p => [p.x, p.y, p.pressure]), {
           size: stroke.size,
-          thinning: 0.5,
+          thinning: 0.6,
           smoothing: 0.5,
           streamline: 0.5,
         });
@@ -202,18 +193,29 @@ const App = () => {
         </div>
 
         <div className="tool-settings">
-          <button 
-            className={`tool-btn ${!isEraser ? "active" : ""}`}
-            onClick={() => setIsEraser(false)}
-          >
-            ✏️ Pen
-          </button>
-          <button 
-            className={`tool-btn ${isEraser ? "active" : ""}`}
-            onClick={() => setIsEraser(true)}
-          >
-            🧽 Eraser
-          </button>
+          <div className="brush-control">
+            <span>Size:</span>
+            <input 
+              type="range" min="1" max="15" 
+              value={penSize} 
+              onChange={(e) => setPenSize(parseInt(e.target.value))} 
+            />
+          </div>
+
+          <div className="tool-toggles">
+            <button 
+              className={`tool-btn ${!isEraser ? "active" : ""}`}
+              onClick={() => setIsEraser(false)}
+            >
+              ✏️ Pen
+            </button>
+            <button 
+              className={`tool-btn ${isEraser ? "active" : ""}`}
+              onClick={() => setIsEraser(true)}
+            >
+              🧽 Eraser
+            </button>
+          </div>
         </div>
       </div>
 
@@ -232,27 +234,27 @@ const App = () => {
 
       <div className="controls">
         <button onClick={handleUndo} disabled={strokes.length === 0} className="secondary-btn">
-          Undo
+          Undo ({strokes.length})
         </button>
         <button onClick={handleRedo} disabled={redoStack.length === 0} className="secondary-btn">
-          Redo
+          Redo ({redoStack.length})
         </button>
         <button onClick={handleClear} className="clear-btn">
           Clear
         </button>
         <button onClick={handleGuess} disabled={loading || strokes.length === 0} className="guess-btn large">
-          {loading ? "..." : "What is this?"}
+          {loading ? "..." : "Analyze Drawing"}
         </button>
       </div>
 
       <div className="result-area">
         {guess && (
           <div className="result">
-            <h2>{provider} Thinks:</h2>
+            <h2>{provider} Result:</h2>
             <p className="guess-text">{guess}</p>
           </div>
         )}
-        {!guess && !loading && <p className="hint">Draw something smoothly!</p>}
+        {!guess && !loading && <p className="hint">Draw something calligraphic!</p>}
       </div>
     </div>
   );
