@@ -147,7 +147,7 @@ p {
   margin-bottom: 2rem;
   width: 100%;
   max-width: 400px;
-  height: 400px;
+  aspect-ratio: 1 / 1; /* Ensures it stays square on all screens */
   cursor: crosshair;
 }
 
@@ -193,9 +193,14 @@ p {
 }
 
 .sketch-canvas {
-  width: 100% !important;
-  height: 100% !important;
+  width: 100%;
+  height: 100%;
   border-radius: 12px;
+  display: block;
+}
+
+.sketch-canvas.smooth {
+  touch-action: none;
 }
 
 .controls {

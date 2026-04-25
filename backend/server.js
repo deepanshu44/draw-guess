@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Mistral } from '@mistralai/mistralai';
+import { rateLimit } from 'express-rate-limit';
 
 dotenv.config();
 
@@ -12,56 +13,63 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// --- Rate Limiter ---
+const limiter = rateLimit({
+	windowMs: 1 * 60 * 1000,
+	limit: 10,
+	standardHeaders: 'draft-7',
+	legacyHeaders: false,
+  message: { error: 'Too many guesses! Please wait a minute.' }
+});
+
+app.use('/api/guess', limiter);
+
 // --- Clients ---
-// We wrap these in a simple check so the server doesn't crash on startup if keys are missing
 const getGeminiModel = () => {
-  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('your_')) {
-    return null;
-  }
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('your_')) return null;
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   return genAI.getGenerativeModel({ 
-    model: 'gemini-2.0-flash',
+    model: 'gemini-flash-latest',
     generationConfig: { maxOutputTokens: 50, temperature: 0.1 }
   });
 };
 
 const getMistralClient = () => {
-  if (!process.env.MISTRAL_API_KEY || process.env.MISTRAL_API_KEY.includes('your_')) {
-    return null;
-  }
+  if (!process.env.MISTRAL_API_KEY || process.env.MISTRAL_API_KEY.includes('your_')) return null;
   return new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
 };
 
 const geminiModel = getGeminiModel();
 const mistralClient = getMistralClient();
 
-// --- Helpers ---
+// --- Unified Prompt Helper ---
 const createPrompt = (context) => {
-  const contextHint = context ? `The user says this is a drawing of a ${context}.` : "";
-  return `Identify this drawing. ${contextHint} 
-  RULES:
-  - If it is a number, provide ONLY the digit (e.g., "5" not "five").
-  - If it is a letter, provide ONLY the character (e.g., "A").
-  - If it is an object, provide ONLY the name in 1-2 words.
-  - No sentences, no punctuation.
-  - If it's a non-English character, give its name/meaning. 
-  Be decisive, give your best guess.`;
+  const contextHint = context ? `The user indicated this is a drawing of a ${context}.` : "";
+  return `You are a high-precision vision system. Analyze this drawing. ${contextHint}
+  
+  TASK:
+  1. MATH: If it's a math problem (e.g., "5 + 7 + 3"), solve it step-by-step internally and return ONLY the final result.
+  2. SYMBOLS: Identify characters/letters from any language. Provide the literal character.
+  3. OBJECTS: Identify common items in 1-2 words.
+  
+  OUTPUT RULE:
+  Return ONLY the literal result (the digit, the character, or the object name). 
+  No sentences. No explanations. Be extremely concise.`;
 };
 
 app.post('/api/guess', async (req, res) => {
   const { image, context, provider } = req.body;
-  console.log(`--- Request: ${provider || 'Gemini'} ---`);
+  const activeProvider = provider || 'Gemini';
+  console.log(`--- Request: ${activeProvider} ---`);
   
   try {
     if (!image) return res.status(400).json({ error: 'No image provided' });
     const prompt = createPrompt(context);
 
-    if (provider === 'Mistral') {
-      if (!mistralClient) {
-        return res.status(400).json({ error: 'Mistral API key is missing in .env' });
-      }
+    if (activeProvider.startsWith('Mistral')) {
+      if (!mistralClient) return res.status(400).json({ error: 'Mistral API key missing' });
 
-      console.log('Calling Mistral Pixtral Vision API...');
+      console.log(`Calling Mistral (Pixtral 12B)...`);
       const chatResponse = await mistralClient.chat.complete({
         model: "pixtral-12b-latest",
         messages: [{
@@ -75,15 +83,12 @@ app.post('/api/guess', async (req, res) => {
 
       let text = chatResponse.choices[0].message.content.trim();
       if (text.includes('![img')) text = "Hand-drawn sketch";
-      
-      console.log('Mistral Guess:', text);
-      res.json({ guess: text || "Unclear drawing" });
+      console.log('Mistral Response:', text);
+      res.json({ guess: text || "Unclear" });
 
     } else {
       // Default: Gemini
-      if (!geminiModel) {
-        return res.status(400).json({ error: 'Gemini API key is missing in .env' });
-      }
+      if (!geminiModel) return res.status(400).json({ error: 'Gemini API key missing' });
 
       const result = await geminiModel.generateContent([
         prompt,
@@ -92,14 +97,13 @@ app.post('/api/guess', async (req, res) => {
       const response = await result.response;
       const text = response.text().trim();
       console.log('Gemini Guess:', text);
-      res.json({ guess: text || "Unclear drawing" });
+      res.json({ guess: text || "Unclear" });
     }
 
   } catch (error) {
     console.error('Server Error:', error.message);
     const status = error.message.includes('429') ? 429 : 500;
-    const msg = status === 429 ? 'Daily limit reached.' : `AI Error: ${error.message.substring(0, 50)}`;
-    res.status(status).json({ error: msg });
+    res.status(status).json({ error: status === 429 ? 'Limit reached' : 'AI failed' });
   }
 });
 

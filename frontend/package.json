@@ -29,6 +29,7 @@
     "webpack-dev-server": "^5.2.3"
   },
   "dependencies": {
+    "perfect-freehand": "^1.2.3",
     "react-signature-canvas": "^1.1.0-alpha.2"
   }
 }
