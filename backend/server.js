@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { Mistral } from '@mistralai/mistralai';
 import { rateLimit } from 'express-rate-limit';
 
@@ -16,10 +16,10 @@ app.use(express.json({ limit: '10mb' }));
 // --- Rate Limiter ---
 const limiter = rateLimit({
 	windowMs: 1 * 60 * 1000,
-	limit: 10,
+	limit: 15,
 	standardHeaders: 'draft-7',
 	legacyHeaders: false,
-  message: { error: 'Too many guesses! Please wait a minute.' }
+  message: { error: 'Too many guesses!' }
 });
 
 app.use('/api/guess', limiter);
@@ -28,9 +28,31 @@ app.use('/api/guess', limiter);
 const getGeminiModel = () => {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('your_')) return null;
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  
+  const schema = {
+    type: SchemaType.OBJECT,
+    properties: {
+      result: { type: SchemaType.STRING },
+      location: {
+        type: SchemaType.OBJECT,
+        properties: {
+          x_percent: { type: SchemaType.NUMBER },
+          y_percent: { type: SchemaType.NUMBER }
+        },
+        required: ["x_percent", "y_percent"]
+      }
+    },
+    required: ["result", "location"]
+  };
+
   return genAI.getGenerativeModel({ 
-    model: 'gemini-flash-latest',
-    generationConfig: { maxOutputTokens: 50, temperature: 0.1 }
+    model: 'gemini-2.0-flash-lite',
+    generationConfig: { 
+      maxOutputTokens: 500, 
+      temperature: 0.1,
+      responseMimeType: "application/json",
+      responseSchema: schema
+    }
   });
 };
 
@@ -42,74 +64,70 @@ const getMistralClient = () => {
 const geminiModel = getGeminiModel();
 const mistralClient = getMistralClient();
 
-// --- Unified Prompt Helper ---
-const createPrompt = (context) => {
-  const contextHint = context ? `The user indicated this is a drawing of a ${context}.` : "";
-  return `You are a high-precision vision system. Analyze this drawing. ${contextHint}
+// --- SPATIAL PROMPT ---
+const createSpatialPrompt = () => {
+  return `You are a high-precision spatial grounding system. 
+  1. Identify the drawing (e.g. "5+7="). If math, solve it.
+  2. Imagine a grid over the image. 
+  3. Find the exact [y, x] coordinate of the EQUALS SIGN (=) or the END of the drawing.
+  4. Provide the location as PERCENTAGES (0 to 100).
   
-  TASK:
-  1. MATH: If it's a math problem (e.g., "5 + 7 + 3"), solve it step-by-step internally and return ONLY the final result.
-  2. SYMBOLS: Identify characters/letters from any language. Provide the literal character.
-  3. OBJECTS: Identify common items in 1-2 words.
+  JSON FORMAT:
+  {
+    "result": "the answer",
+    "location": {
+      "x_percent": number (where answer should start),
+      "y_percent": number (vertical center of the drawing)
+    }
+  }
   
-  OUTPUT RULE:
-  Return ONLY the literal result (the digit, the character, or the object name). 
-  No sentences. No explanations. Be extremely concise.`;
+  Example: If the "=" is in the middle right, return {"x_percent": 65, "y_percent": 50}.`;
 };
 
 app.post('/api/guess', async (req, res) => {
-  const { image, context, provider } = req.body;
+  const { image, provider } = req.body;
   const activeProvider = provider || 'Gemini';
-  console.log(`--- Request: ${activeProvider} ---`);
+  console.log(`--- Spatial Request: ${activeProvider} ---`);
   
   try {
     if (!image) return res.status(400).json({ error: 'No image provided' });
-    const prompt = createPrompt(context);
 
     if (activeProvider.startsWith('Mistral')) {
-      if (!mistralClient) return res.status(400).json({ error: 'Mistral API key missing' });
+      if (!mistralClient) return res.status(400).json({ error: 'Mistral key missing' });
 
-      console.log(`Calling Mistral (Pixtral 12B)...`);
       const chatResponse = await mistralClient.chat.complete({
         model: "pixtral-12b-latest",
         messages: [{
           role: "user",
           content: [
-            { type: "text", text: prompt },
+            { type: "text", text: createSpatialPrompt() + " Respond with JSON only." },
             { type: "image_url", imageUrl: `data:image/png;base64,${image}` }
           ]
         }]
       });
 
-      let text = chatResponse.choices[0].message.content.trim();
-      if (text.includes('![img')) text = "Hand-drawn sketch";
-      console.log('Mistral Response:', text);
-      res.json({ guess: text || "Unclear" });
+      const responseText = chatResponse.choices[0].message.content.trim();
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      const spatialData = JSON.parse(jsonMatch[0]);
+      res.json({ guess: spatialData.result, location: spatialData.location, isSpatial: true });
 
     } else {
-      // Default: Gemini
-      if (!geminiModel) return res.status(400).json({ error: 'Gemini API key missing' });
+      if (!geminiModel) return res.status(400).json({ error: 'Gemini key missing' });
 
       const result = await geminiModel.generateContent([
-        prompt,
+        createSpatialPrompt(),
         { inlineData: { data: image, mimeType: "image/png" } }
       ]);
-      const response = await result.response;
-      const text = response.text().trim();
-      console.log('Gemini Guess:', text);
-      res.json({ guess: text || "Unclear" });
+      
+      const spatialData = JSON.parse(result.response.text());
+      res.json({ guess: spatialData.result, location: spatialData.location, isSpatial: true });
     }
 
   } catch (error) {
     console.error('Server Error:', error.message);
-    const status = error.message.includes('429') ? 429 : 500;
-    res.status(status).json({ error: status === 429 ? 'Limit reached' : 'AI failed' });
+    res.status(500).json({ error: "AI failed to process spatial data" });
   }
 });
-
-// Global error handlers
-process.on('unhandledRejection', (err) => console.error('Promise Error:', err));
-process.on('uncaughtException', (err) => console.error('Crash Error:', err));
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

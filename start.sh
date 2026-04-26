@@ -20,7 +20,7 @@ pkill -f 'webpack serve' 2>/dev/null
 # Start Backend
 echo -e "${GREEN}Starting Backend on port 3001...${NC}"
 cd backend
-$NPM_PATH start > /dev/null 2>&1 &
+$NPM_PATH start > backend.log 2>&1 &
 BACKEND_PID=$!
 
 # Start Frontend

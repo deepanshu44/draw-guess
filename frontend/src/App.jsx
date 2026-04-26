@@ -21,24 +21,26 @@ const App = () => {
   const canvasRef = useRef(null);
   const [guess, setGuess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState("Any");
   const [provider, setProvider] = useState("Gemini");
   const [isEraser, setIsEraser] = useState(false);
   const [penSize, setPenSize] = useState(5);
   
+  // Spatial state
+  const [aiPos, setAiPos] = useState(null);
+
   // Vector Strokes State
   const [strokes, setStrokes] = useState([]);
   const [currentStroke, setCurrentStroke] = useState(null);
   const [redoStack, setRedoStack] = useState([]);
 
-  const modes = ["Any", "Object", "Letter", "Number", "Scenery"];
-  const providers = ["Gemini", "Mistral", "Mistral OCR"];
+  const providers = ["Gemini", "Mistral"];
 
   const handleClear = () => {
     if (strokes.length > 0 && !window.confirm("Clear entire board?")) return;
     setStrokes([]);
     setRedoStack([]);
     setGuess("");
+    setAiPos(null);
     setLoading(false);
   };
 
@@ -49,6 +51,7 @@ const App = () => {
     setRedoStack(prev => [...prev, undone]);
     setStrokes(newStrokes);
     setGuess("");
+    setAiPos(null);
   };
 
   const handleRedo = () => {
@@ -65,21 +68,18 @@ const App = () => {
 
     setLoading(true);
     setGuess("");
+    setAiPos(null);
+    
     try {
       const canvas = canvasRef.current;
       const finalCanvas = document.createElement("canvas");
-      
-      // FIXED AI RESOLUTION: Ensures consistent token usage regardless of screen size
       const aiSize = 512;
       finalCanvas.width = aiSize;
       finalCanvas.height = aiSize;
       const ctx = finalCanvas.getContext("2d");
       
-      // Paint white background
       ctx.fillStyle = "white";
       ctx.fillRect(0, 0, aiSize, aiSize);
-      
-      // Draw the user's high-res canvas downscaled to the AI's 512px view
       ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, aiSize, aiSize);
 
       const dataUrl = finalCanvas.toDataURL("image/png");
@@ -90,20 +90,27 @@ const App = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           image: base64Image,
-          context: mode !== "Any" ? mode : null,
           provider: provider
         }),
       });
 
       const data = await response.json();
       if (response.ok) {
-        setGuess(data.guess || "No guess returned");
+        setGuess(data.guess);
+        
+        // Use percentages for rock-solid positioning
+        if (data.location && data.isSpatial) {
+          setAiPos({
+            x: data.location.x_percent,
+            y: data.location.y_percent
+          });
+        }
       } else {
-        setGuess(data.error || "Error from server");
+        setGuess(data.error || "Error");
       }
     } catch (error) {
       console.error("Guess error:", error);
-      setGuess("Check connection");
+      setGuess("Connection error");
     } finally {
       setLoading(false);
     }
@@ -120,9 +127,10 @@ const App = () => {
     setCurrentStroke({
       points: [point],
       color: isEraser ? "white" : "black",
-      size: isEraser ? 35 : penSize // Eraser is always thick
+      size: isEraser ? 35 : penSize
     });
     setRedoStack([]);
+    setAiPos(null); // Clear AI pos on new stroke
   };
 
   const handlePointerMove = (e) => {
@@ -182,7 +190,8 @@ const App = () => {
 
   return (
     <div className="container">
-      <h1>Smooth Draw & Guess</h1>
+      <h1>Spatial Draw & Guess</h1>
+      <p className="subtitle">Draw a math problem and see the result appear!</p>
       
       <div className="settings-bar">
         <div className="provider-selector">
@@ -208,18 +217,8 @@ const App = () => {
           </div>
 
           <div className="tool-toggles">
-            <button 
-              className={`tool-btn ${!isEraser ? "active" : ""}`}
-              onClick={() => setIsEraser(false)}
-            >
-              ✏️ Pen
-            </button>
-            <button 
-              className={`tool-btn ${isEraser ? "active" : ""}`}
-              onClick={() => setIsEraser(true)}
-            >
-              🧽 Eraser
-            </button>
+            <button className={`tool-btn ${!isEraser ? "active" : ""}`} onClick={() => setIsEraser(false)}>✏️</button>
+            <button className={`tool-btn ${isEraser ? "active" : ""}`} onClick={() => setIsEraser(true)}>🧽</button>
           </div>
         </div>
       </div>
@@ -235,31 +234,37 @@ const App = () => {
           style={{ touchAction: "none" }}
         />
         {loading && <div className="loading-overlay">Thinking...</div>}
+        
+        {/* AI SPATIAL RESULT OVERLAY */}
+        {aiPos && guess && (
+          <div 
+            className="ai-spatial-result"
+            style={{ 
+              left: `${aiPos.x}%`, 
+              top: `${aiPos.y}%` 
+            }}
+          >
+            {guess}
+          </div>
+        )}
       </div>
 
       <div className="controls">
-        <button onClick={handleUndo} disabled={strokes.length === 0} className="secondary-btn">
-          Undo ({strokes.length})
-        </button>
-        <button onClick={handleRedo} disabled={redoStack.length === 0} className="secondary-btn">
-          Redo ({redoStack.length})
-        </button>
-        <button onClick={handleClear} className="clear-btn">
-          Clear
-        </button>
+        <button onClick={handleUndo} disabled={strokes.length === 0} className="secondary-btn">Undo</button>
+        <button onClick={handleRedo} disabled={redoStack.length === 0} className="secondary-btn">Redo</button>
+        <button onClick={handleClear} className="clear-btn">Clear</button>
         <button onClick={handleGuess} disabled={loading || strokes.length === 0} className="guess-btn large">
-          {loading ? "..." : "Analyze Drawing"}
+          {loading ? "..." : "Solve / Identify"}
         </button>
       </div>
 
       <div className="result-area">
-        {guess && (
+        {guess && !aiPos && (
           <div className="result">
-            <h2>{provider} Result:</h2>
+            <h2>Result:</h2>
             <p className="guess-text">{guess}</p>
           </div>
         )}
-        {!guess && !loading && <p className="hint">Draw something calligraphic!</p>}
       </div>
     </div>
   );
