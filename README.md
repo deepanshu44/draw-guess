@@ -55,21 +55,17 @@ PORT=3001
 ```
 
 ### 4. Running the App
-Open two terminal windows:
+This project is optimized for cross-platform development (Windows, macOS, Linux) using `concurrently`.
 
-**Terminal 1 (Backend):**
+**One-command startup:**
 ```bash
-cd draw-guess/backend
+cd draw-guess
 npm start
 ```
 
-**Terminal 2 (Frontend):**
-```bash
-cd draw-guess/frontend
-npm run serve
-```
+This will automatically launch the backend (port 3001) and the frontend (port 8080) in a single terminal window with unified, color-coded logs.
 
-Access the app at: `http://localhost:8080` (or your LAN IP).
+*To stop the servers, just press `CTRL+C`.*
 
 ## 💡 Usage Tips
 - **Be Decisive:** The AI is tuned for high determinism. It will try its best to give you a literal name for your drawing.
