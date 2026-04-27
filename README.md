@@ -37,12 +37,7 @@ A high-performance, responsive web application where you draw, and advanced AI m
 git clone <your-repo-url>
 cd draw-guess
 
-# Install Backend Dependencies
-cd backend
-npm install
-
-# Install Frontend Dependencies
-cd ../frontend
+# Install all dependencies (Monorepo)
 npm install
 ```
 
@@ -55,17 +50,16 @@ PORT=3001
 ```
 
 ### 4. Running the App
-This project is optimized for cross-platform development (Windows, macOS, Linux) using `concurrently`.
+This project is optimized for cross-platform development using `npm workspaces` and `concurrently`.
 
 **One-command startup:**
 ```bash
-cd draw-guess
 npm start
 ```
 
 This will automatically launch the backend (port 3001) and the frontend (port 8080) in a single terminal window with unified, color-coded logs.
 
-*To stop the servers, just press `CTRL+C`.*
+*To stop the servers, just press `CTRL+C` or run `npm stop`.*
 
 ## 💡 Usage Tips
 - **Be Decisive:** The AI is tuned for high determinism. It will try its best to give you a literal name for your drawing.
