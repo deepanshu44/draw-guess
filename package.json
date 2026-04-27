@@ -8,9 +8,10 @@
     "backend"
   ],
   "scripts": {
-    "start": "concurrently --kill-others \"npm run start:backend\" \"npm run start:frontend\"",
-    "start:backend": "node --env-file=.env backend/server.js",
-    "start:frontend": "node --env-file=.env node_modules/.bin/webpack serve --config frontend/webpack.config.js",
+    "setup": "npm install",
+    "start": "concurrently --kill-others \"npm run backend\" \"npm run frontend\"",
+    "backend": "node --env-file=.env backend/server.js",
+    "frontend": "npx --env-file=.env webpack serve --config frontend/webpack.config.js",
     "build": "npm run build -w frontend",
     "stop": "pkill -f 'server.js' && pkill -f 'webpack'"
   },
