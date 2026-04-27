@@ -1,11 +1,12 @@
 {
-  "name": "draw-guess-frontend",
+  "name": "@draw-guess/frontend",
   "version": "2.0.0",
   "description": "hand-drawn sketch recognition webapp",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "webpack serve",
     "build": "webpack --mode=production --env node-env=production",
     "serve": "webpack serve"
   },
