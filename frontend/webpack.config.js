@@ -17,11 +17,12 @@ const config = {
     devServer: {
         open: false,
         host: '0.0.0.0',
+        port: process.env.FRONTEND_PORT || 8080,
         allowedHosts: 'all',
         proxy: [
             {
                 context: ['/api'],
-                target: 'http://localhost:3001',
+                target: `http://localhost:${process.env.BACKEND_PORT || 3001}`,
             },
         ],
     },

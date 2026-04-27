@@ -42,24 +42,27 @@ npm install
 ```
 
 ### 3. Environment Variables
-Create a `.env` file in the `draw-guess/backend` directory:
+Create a `.env` file in the **root** directory (see `.env.example`):
 ```env
 GEMINI_API_KEY=your_google_ai_key
 MISTRAL_API_KEY=your_mistral_ai_key
-PORT=3001
+
+# Optional: Customize Ports
+BACKEND_PORT=3001
+FRONTEND_PORT=8080
 ```
 
 ### 4. Running the App
-This project is optimized for cross-platform development using `npm workspaces` and `concurrently`.
+This project is optimized for cross-platform development using `npm workspaces` and centralized port management.
 
 **One-command startup:**
 ```bash
 npm start
 ```
 
-This will automatically launch the backend (port 3001) and the frontend (port 8080) in a single terminal window with unified, color-coded logs.
+This will automatically load your `.env` settings and launch the backend and frontend in a single terminal window.
 
-*To stop the servers, just press `CTRL+C` or run `npm stop`.*
+*To stop the servers, run `npm stop`.*
 
 ## 💡 Usage Tips
 - **Be Decisive:** The AI is tuned for high determinism. It will try its best to give you a literal name for your drawing.
