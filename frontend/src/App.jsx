@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import DrawingBoard from "./components/DrawingBoard";
+import ControlPanel from "./components/ControlPanel";
+import AIResult from "./components/AIResult";
 import "./App.css";
 
 const App = () => {
@@ -54,34 +56,18 @@ const App = () => {
       <h1>Draw & Guess AI</h1>
       <p className="subtitle">Identify characters, solve math, or sketch objects!</p>
       
-      <div className="settings-bar">
-        <div className="provider-selector">
-          {providers.map((p) => (
-            <button key={p} className={`provider-chip ${provider === p ? "active" : ""}`} onClick={() => setProvider(p)}>{p}</button>
-          ))}
-        </div>
-
-        <div className="tool-settings">
-          <div className="color-palette">
-            {colors.map((c) => (
-              <button
-                key={c}
-                className={`color-swatch ${penColor === c && !isEraser ? "active" : ""}`}
-                style={{ backgroundColor: c }}
-                onClick={() => { setPenColor(c); setIsEraser(false); }}
-              />
-            ))}
-          </div>
-
-          <div className="brush-control">
-            <input type="range" min="1" max="15" value={penSize} onChange={(e) => setPenSize(parseInt(e.target.value))} />
-          </div>
-
-          <div className="tool-toggles">
-            <button className={`tool-btn ${isEraser ? "active" : ""}`} onClick={() => setIsEraser(true)}>🧽</button>
-          </div>
-        </div>
-      </div>
+      <ControlPanel 
+        providers={providers}
+        provider={provider}
+        setProvider={setProvider}
+        colors={colors}
+        penColor={penColor}
+        setPenColor={setPenColor}
+        penSize={penSize}
+        setPenSize={setPenSize}
+        isEraser={isEraser}
+        setIsEraser={setIsEraser}
+      />
 
       <div className="canvas-wrapper">
         <DrawingBoard 
@@ -93,16 +79,21 @@ const App = () => {
         />
         {loading && <div className="loading-overlay">Thinking...</div>}
         
-        {aiPos && guess && (
-          <div className="ai-spatial-result" style={{ left: `${aiPos.x}%`, top: `${aiPos.y}%`, color: penColor }}>
-            {guess}
-          </div>
-        )}
+        <AIResult 
+          guess={guess}
+          aiPos={aiPos}
+          penColor={penColor}
+          provider={provider}
+        />
       </div>
 
       <div className="controls">
-        <button onClick={() => boardRef.current.undo()} disabled={historyCount.undo === 0} className="secondary-btn">Undo ({historyCount.undo})</button>
-        <button onClick={() => boardRef.current.redo()} disabled={historyCount.redo === 0} className="secondary-btn">Redo ({historyCount.redo})</button>
+        <button onClick={() => boardRef.current.undo()} disabled={historyCount.undo === 0} className="secondary-btn">
+          Undo ({historyCount.undo})
+        </button>
+        <button onClick={() => boardRef.current.redo()} disabled={historyCount.redo === 0} className="secondary-btn">
+          Redo ({historyCount.redo})
+        </button>
         <button onClick={() => boardRef.current.clear()} className="clear-btn">Clear</button>
         <button onClick={handleGuess} disabled={loading || historyCount.undo === 0} className="guess-btn large">
           {loading ? "..." : "Analyze"}
@@ -110,12 +101,11 @@ const App = () => {
       </div>
 
       <div className="result-area">
-        {guess && !aiPos && (
-          <div className="result">
-            <h2>{provider} Result:</h2>
-            <p className="guess-text">{guess}</p>
-          </div>
-        )}
+        <AIResult 
+          guess={guess}
+          aiPos={null} // Only show non-spatial result here
+          provider={provider}
+        />
         {!guess && !loading && <p className="hint">Pick a color and start sketching!</p>}
       </div>
     </div>
