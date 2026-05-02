@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>PROJECT_REPORT.html</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+
+</head>
+
+<body>
+
+<h1>📊 Project Development Report: Draw &amp; Guess AI</h1>
+<p><strong>Date:</strong> April 26-27, 2026
+<strong>Development Time:</strong> ~5 Hours (Total Session)
+<strong>Platform:</strong> Web (Cross-platform Desktop/Mobile)
+<strong>Architecture:</strong> npm Workspaces Monorepo</p>
+<hr />
+<h2>1. Executive Summary</h2>
+<p>The goal was to create an interactive web application where users can draw on a screen, and an AI provides real-time recognition of the sketch. The project evolved to support complex math solving, multi-language character recognition, and "Spatial Results"—where the AI actually "writes" its answer back onto the drawing canvas in a natural handwriting font.</p>
+<hr />
+<h2>2. Timeline &amp; Development Phases</h2>
+<h3>Phase 1: Foundation (Hours 1-1.5)</h3>
+<ul>
+<li><strong>Initialization:</strong> Set up a Node.js Express backend and a React frontend.</li>
+<li><strong>Drawing Engine v1:</strong> Implemented a basic drawing board using <code>react-sketch-canvas</code>.</li>
+<li><strong>AI Integration:</strong> Connected the Google Gemini 1.5 Flash API for multimodal image analysis.</li>
+<li><strong>LAN Support:</strong> Configured Webpack to allow access over local Wi-Fi via QR code.</li>
+</ul>
+<h3>Phase 2: Stability &amp; UX (Hours 1.5-3)</h3>
+<ul>
+<li><strong>Engine Swap:</strong> Replaced the initial drawing library with <code>react-signature-canvas</code> and finally a <strong>Custom Smoothing Engine</strong> using <code>perfect-freehand</code> to provide a calligraphic "ink" feel.</li>
+<li><strong>Feature Expansion:</strong> Added <strong>Undo</strong>, <strong>Redo</strong>, and a high-precision <strong>Eraser</strong>.</li>
+<li><strong>Precision Fix:</strong> Solved a critical "delta offset" bug where pen strokes drifted from the fingertip on high-resolution (Retina) mobile screens.</li>
+</ul>
+<h3>Phase 3: The "Spatial" Breakthrough (Hours 3-4)</h3>
+<ul>
+<li><strong>Contextual Awareness:</strong> Upgraded the AI to detect math problems (e.g., <code>5+7=</code>) and calculate results.</li>
+<li><strong>Spatial Mapping:</strong> Implemented a grid-based coordinate system allowing the AI to return the exact <code>[X, Y]</code> location of the drawing.</li>
+<li><strong>Handwriting Injection:</strong> Integrated the "Caveat" Google Font to render AI results as natural handwriting directly on the canvas.</li>
+</ul>
+<h3>Phase 4: Professional Refinement (Hour 5)</h3>
+<ul>
+<li><strong>Architecture:</strong> Converted the project into an <strong>npm Workspaces Monorepo</strong>.</li>
+<li><strong>DevOps:</strong> Centralized port and API key management into a single root <code>.env</code> file.</li>
+<li><strong>Security:</strong> Performed a full security sweep, cleaned Git history, and established <code>.env.example</code> templates.</li>
+<li><strong>Publishing:</strong> Successfully pushed the clean, production-ready code to GitHub.</li>
+</ul>
+<hr />
+<h2>3. Key Hurdles &amp; Solutions</h2>
+<h3>Hurdle 1: The "429 Quota" Trap</h3>
+<ul>
+<li><strong>Problem:</strong> The free-tier Gemini 2.0 models had an extremely low limit (20 requests/day), which we exhausted during testing.</li>
+<li><strong>Solution:</strong> Switched to <strong>Gemini 2.0 Flash-Lite</strong> and implemented <strong>manual/debounced guessing</strong> to preserve the daily quota.</li>
+</ul>
+<h3>Hurdle 2: OCR vs. Vision Models</h3>
+<ul>
+<li><strong>Problem:</strong> Mistral OCR was returning markdown artifacts like <code>![img-0.jpeg]</code> when looking at sketches.</li>
+<li><strong>Solution:</strong> Replaced the document-based OCR model with <strong>Pixtral 12B (Multimodal)</strong> and used a "Strict OCR" prompt to force literal text responses.</li>
+</ul>
+<h3>Hurdle 3: High-DPI Coordinate Hallucination</h3>
+<ul>
+<li><strong>Problem:</strong> AI results were appearing in random locations because the AI was confused by the coordinate scale (0-1000).</li>
+<li><strong>Solution:</strong> Moved to a <strong>Percentage-Based Grid (0-100%)</strong> and updated the prompt to anchor results specifically to the right edge of the detected bounding box.</li>
+</ul>
+<h3>Hurdle 4: Absolute Path Portability</h3>
+<ul>
+<li><strong>Problem:</strong> Automated scripts worked on the host machine but failed the "everyone's computer" test due to hardcoded NVM paths.</li>
+<li><strong>Solution:</strong> Refactored the entire project to use standard, portable <code>npm</code> and <code>npx</code> commands within the <code>package.json</code>.</li>
+</ul>
+<hr />
+<h2>4. Final Technology Stack</h2>
+<ul>
+<li><strong>Frontend:</strong> React 19, Vanilla CSS, Webpack 5.</li>
+<li><strong>Backend:</strong> Node.js 22 (ES Modules), Express.</li>
+<li><strong>AI Providers:</strong> Google Gemini 2.0 Flash-Lite, Mistral Pixtral 12B.</li>
+<li><strong>Utilities:</strong> <ul>
+<li><code>perfect-freehand</code> (Stroke smoothing)</li>
+<li><code>express-rate-limit</code> (Security)</li>
+<li><code>concurrently</code> (Automation)</li>
+<li><code>dotenv</code> (Config)</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>5. Conclusion</h2>
+<p>The project successfully met and exceeded all initial requirements. It is a robust, secure, and highly optimized application that demonstrates advanced AI implementation techniques such as spatial reasoning and multimodal grounding.</p>
+<p><strong>Final Repo Status:</strong> <a href="https://github.com/deepanshu44/draw-guess">https://github.com/deepanshu44/draw-guess</a> (Live &amp; Synced)</p>
+</body>
+</html>

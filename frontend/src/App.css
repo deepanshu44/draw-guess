@@ -70,8 +70,39 @@ h1 {
 
 .tool-settings {
   display: flex;
-  gap: 0.8rem;
+  flex-direction: column;
+  gap: 0.6rem;
   align-items: center;
+  width: 100%;
+}
+
+.color-palette {
+  display: flex;
+  gap: 0.5rem;
+  padding: 5px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.color-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid white;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 0 0 1px #eee;
+  transition: transform 0.2s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.2);
+}
+
+.color-swatch.active {
+  box-shadow: 0 0 0 2px #3498db;
+  transform: scale(1.1);
 }
 
 .brush-control {
